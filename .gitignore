@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+build/
+
+# IDEs
+.idea/
+.vscode/
+
+# Environment
+.env
+
+# Docker
+.docker_data/
+kafka_data/
+mysql_data/
+zookeeper_data/

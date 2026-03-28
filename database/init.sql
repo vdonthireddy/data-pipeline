@@ -1,0 +1,19 @@
+CREATE DATABASE IF NOT EXISTS sensor_db;
+USE sensor_db;
+
+CREATE TABLE IF NOT EXISTS raw_sensor_data (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sensor_type VARCHAR(50) NOT NULL,
+    value DOUBLE NOT NULL,
+    timestamp DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sensor_type VARCHAR(50) NOT NULL,
+    value DOUBLE NOT NULL,
+    message VARCHAR(255) NOT NULL,
+    timestamp DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

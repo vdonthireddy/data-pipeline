@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: apache/kafka:3.7.0
+    networks:
+      - sensor-network
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft settings
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:9093,PLAINTEXT_HOST://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  mysql:
+    image: mysql:8.0
+    networks:
+      - sensor-network
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: sensor_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  kafka-setup:
+    image: apache/kafka:3.7.0
+    depends_on:
+      - kafka
+    networks:
+      - sensor-network
+    volumes:
+      - ./kafka/setup_topics.sh:/setup_topics.sh
+    entrypoint: ["/bin/bash", "/setup_topics.sh"]
+
+  simulator:
+    build: ./simulator
+    depends_on:
+      - kafka
+    networks:
+      - sensor-network
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
+  mysql-writer:
+    build: ./consumers/mysql_writer
+    depends_on:
+      - kafka
+      - mysql
+    networks:
+      - sensor-network
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: rootpassword
+      MYSQL_DB: sensor_db
+
+  spark-processor:
+    build: ./consumers/spark_processor
+    depends_on:
+      - kafka
+      - mysql
+    networks:
+      - sensor-network
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: rootpassword
+      MYSQL_DB: sensor_db
+
+  backend:
+    build: ./backend
+    depends_on:
+      - mysql
+    networks:
+      - sensor-network
+    ports:
+      - "8000:8000"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: rootpassword
+      MYSQL_DB: sensor_db
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    networks:
+      - sensor-network
+    ports:
+      - "3000:80"
+
+networks:
+  sensor-network:
+    driver: bridge
