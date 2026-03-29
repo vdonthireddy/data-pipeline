@@ -68,3 +68,35 @@ flowchart TD
 - `/frontend`: React dashboard with **WebSocket Client**.
 - `/monitoring`: Prometheus configuration.
 - `docker-compose.yml`: Orchestration for 12+ containers.
+
+## 🧠 Design Decisions & Architectural Rationale
+
+### 1. Kafka KRaft Mode over Zookeeper
+The cluster uses **Kafka 3.7.0 in KRaft mode**. KRaft eliminates the need for Zookeeper by managing metadata internally within Kafka itself.
+- **Why:** This reduces architectural complexity (fewer containers), improves metadata propagation speed, and aligns with the modern standard for production Kafka deployments.
+
+### 2. The 3-Node Cluster & Replication Factor 3
+We deployed 3 brokers with a **Replication Factor of 3** and `min.insync.replicas=2`.
+- **Why:** This ensures **High Availability (HA)**. The cluster can tolerate the failure of a single broker without any data loss or downtime. Using an odd number of nodes (3) is essential for KRaft controllers to maintain a majority quorum for leader election.
+
+### 3. Keyed Partitioning for Ordering & Parallelism
+Messages are produced with the `sensor_type` as the **message key**.
+- **Sequential Order:** Kafka guarantees that all messages with the same key are always routed to the same partition. This ensures that sensor data is consumed in the exact order it was generated (Requirement 2a).
+- **Parallel Processing:** With 4 partitions, multiple consumers can process different sensors simultaneously, fulfilling the need for high-throughput parallel processing (Requirement 2b).
+
+### 4. Real-time WebSockets vs. Polling
+The dashboard was upgraded from 5s REST polling to **FastAPI WebSockets**.
+- **Why:** Telemetry data is inherently a "push" model. WebSockets provide instantaneous updates with significantly lower network overhead than constant HTTP requests, creating a professional "live" dashboard experience.
+
+### 5. Spark Structured Streaming for Rules
+Alerting is handled by **Apache Spark** rather than the simple MySQL writer.
+- **Why:** Spark is designed for complex, stateful stream processing. While the current rules are simple thresholds, this architecture allows for future "advanced" learning features like calculating 5-minute rolling averages or detecting patterns across multiple sensors.
+
+### 6. Multi-stage Nginx Frontend Build
+The React UI is built using a **multi-stage Dockerfile** and served via **Nginx**.
+- **Why:** In production, you should never use `npm start` (development server). Nginx is a high-performance, secure, and lightweight web server that provides better stability and faster load times for static assets.
+
+### 7. Centralized Observability Stack
+Integrated **Prometheus** and **Grafana** using the **Kafka Exporter**.
+- **Why:** In a distributed system, "knowing" what is happening is as important as the code itself. This stack allows you to monitor consumer lag (is the DB keeping up?), broker throughput, and system health in a single pane of glass.
+
