@@ -13,6 +13,27 @@ A complete end-to-end data pipeline built with Python, Apache Kafka (KRaft), Spa
 
 ## 🏗 Architecture
 
+```mermaid
+graph TD
+    User([User]) <--> UI[Frontend - React/Nginx]
+    UI <--> API[Backend - FastAPI]
+    API --> DB[(MySQL Database)]
+    API -- Control Signals --> Sim[Simulator - Python]
+    
+    subgraph "Data Pipeline"
+        Sim -- "Produce (UTC)" --> Kafka[Kafka - KRaft Mode]
+        Kafka -- "Consume (Raw)" --> Writer[MySQL Writer - Python]
+        Kafka -- "Stream (Rules)" --> Spark[Spark Processor - PySpark]
+        
+        Writer --> DB
+        Spark -- "Log Alerts" --> DB
+    end
+    
+    style Kafka fill:#f9f,stroke:#333,stroke-width:2px
+    style DB fill:#bbf,stroke:#333,stroke-width:2px
+    style Spark fill:#dfd,stroke:#333,stroke-width:2px
+```
+
 1.  **Simulator (Python):** Generates timeseries data with configurable frequency and control status polling.
 2.  **Kafka (Apache 3.7.0):** Keyed partitioning ensures sequential order per sensor type (4 partitions).
 3.  **Consumers:**
