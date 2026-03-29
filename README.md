@@ -20,9 +20,7 @@ flowchart TD
     API --> DB[(MySQL Database)]
     API -- Control --> Sim[Simulator - Python]
     
-    Sim -- "Keyed by Sensor Type" --> P
-    
-    subgraph Kafka [Kafka Broker: 1 | Topic: sensor_data]
+    subgraph Kafka [Kafka: sensor_data topic]
         direction LR
         P0[Partition 0: Temp]
         P1[Partition 1: Press]
@@ -30,6 +28,11 @@ flowchart TD
         P3[Partition 3: Acou]
     end
 
+    Sim -- "Keyed by Sensor Type" --> P0
+    Sim -- "Keyed by Sensor Type" --> P1
+    Sim -- "Keyed by Sensor Type" --> P2
+    Sim -- "Keyed by Sensor Type" --> P3
+    
     P0 & P1 & P2 & P3 --> Writer[MySQL Writer]
     P0 & P1 & P2 & P3 --> Spark[Spark Processor]
     
