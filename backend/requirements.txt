@@ -1,4 +1,7 @@
 fastapi
-uvicorn
+uvicorn[standard]
 mysql-connector-python
 pydantic
+aiokafka
+requests
+websockets

@@ -56,6 +56,7 @@ def write_to_mysql(batch_df, batch_id):
 def main():
     spark = SparkSession.builder \
         .appName("SensorProcessor") \
+        .config("spark.ui.prometheus.enabled", "true") \
         .getOrCreate()
         
     spark.sparkContext.setLogLevel("WARN")

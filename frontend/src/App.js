@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Dot } from 'recharts';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
 const SENSOR_CONFIG = {
   temperature: { color: '#ff7300', unit: '°C', threshold: 80 },
@@ -60,6 +60,7 @@ function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [intervalSec, setIntervalSec] = useState(5);
 
+  // Initial data fetch
   useEffect(() => {
     const fetchStatus = async () => {
       try {
@@ -70,7 +71,6 @@ function App() {
         console.error("Error fetching status:", err);
       }
     };
-    fetchStatus();
 
     const fetchData = async () => {
       try {
@@ -86,10 +86,43 @@ function App() {
       }
     };
 
+    fetchStatus();
     fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, [isPaused]);
+  }, []);
+
+  // WebSocket for real-time updates
+  useEffect(() => {
+    const wsUrl = API_URL.replace('http', 'ws') + '/ws';
+    const ws = new WebSocket(wsUrl);
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      
+      if (message.type === 'sensor_data') {
+        setData(prevData => {
+          const newData = [...prevData, message.data];
+          // Keep only last 100 points and ensure they are sorted by timestamp
+          return newData
+            .slice(-100)
+            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        });
+      } else if (message.type === 'notification') {
+        setNotifications(prevNotifications => {
+          const newNotifications = [message.data, ...prevNotifications];
+          // Keep only last 20 notifications
+          return newNotifications.slice(0, 20);
+        });
+      }
+    };
+
+    ws.onopen = () => console.log('WebSocket Connected');
+    ws.onclose = () => console.log('WebSocket Disconnected');
+    ws.onerror = (err) => console.error('WebSocket Error:', err);
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   const handleIntervalChange = async (e) => {
     let val = parseInt(e.target.value);
