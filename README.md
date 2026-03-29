@@ -14,22 +14,22 @@ A highly available end-to-end data pipeline with multi-node Kafka, real-time Web
 ```mermaid
 flowchart TD
     User --> UI[Frontend - React/Nginx]
-    UI <--> |WebSocket| API[Backend - FastAPI]
+    UI <--> WebSocket((WebSocket)) <--> API[Backend - FastAPI]
     API --> DB[(MySQL Database)]
-    API -- Control --> Sim[Simulator - Python]
+    API -- Control Signals --> Sim[Simulator - Python]
     
-    subgraph KafkaCluster [Kafka Cluster: 3 Brokers | Replication: 3]
+    Sim -- Keyed Data --> KafkaCluster
+    
+    subgraph KafkaCluster [Kafka Cluster - 3 Brokers - Replication 3]
         direction LR
         K1[Broker 1]
         K2[Broker 2]
         K3[Broker 3]
     end
 
-    Sim -- "Keyed" --> KafkaCluster
-    
-    KafkaCluster --> Writer[MySQL Writer]
-    KafkaCluster --> Spark[Spark Processor]
-    KafkaCluster --> API
+    KafkaCluster -- Raw Data --> Writer[MySQL Writer]
+    KafkaCluster -- Stream Processing --> Spark[Spark Processor]
+    KafkaCluster -- Real-time Feed --> API
     
     subgraph Monitoring
         Prom[Prometheus] --> KExp[Kafka Exporter]
