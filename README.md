@@ -48,6 +48,16 @@ flowchart TD
     - **Sequential Order:** The Simulator uses the `sensor_type` as the message **key**. Kafka guarantees that all messages with the same key are sent to the same partition, ensuring that a consumer reads a specific sensor's data in the exact order it was generated.
     - **Parallelism:** By having 4 partitions, the pipeline can handle high-throughput loads. Multiple consumer instances (within a consumer group) can attach to different partitions to process data from different sensors simultaneously without blocking each other.
 
+## 🧠 Design Decisions: Why a Single Topic with Keyed Partitions?
+
+Rather than creating a separate topic for each sensor, this architecture uses a single `sensor_data` topic with 4 partitions, keyed by `sensor_type`. This approach was chosen for several technical reasons:
+
+1.  **Guaranteed Sequential Order (Requirement 2a):** By using the `sensor_type` as the message **key**, Kafka ensures that all messages for a specific sensor (e.g., "temperature") always land in the same partition. Kafka guarantees that a consumer will read these messages in the exact order they were produced.
+2.  **Efficient Parallelism (Requirement 2b):** Multiple partitions allow for high concurrency. A single consumer group can have multiple consumers working in parallel, with each assigned to a different partition (and thus a different sensor). This fulfills the requirement to process sensor data independently and simultaneously.
+3.  **Simplified Stream Processing:** A single Spark Structured Streaming job can subscribe to one topic and process the entire telemetry stream. This is significantly more resource-efficient than managing 4 separate Spark jobs or complex multi-topic unions.
+4.  **Unified Schema Management:** Since all sensors share the same data structure (`sensor_type`, `value`, `timestamp`), a single topic maintains a clean, centralized schema, making downstream writes to MySQL more straightforward.
+5.  **Scalability:** This pattern scales more gracefully. If new sensor types are added, they can simply use new keys within the existing partitioned topic, reducing the overhead of managing hundreds of individual topics.
+
 ## 🛠 Spark & Alerting Rules
 
 | Sensor | Threshold | Notification | Color |
