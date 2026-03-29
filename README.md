@@ -11,7 +11,7 @@ A complete end-to-end data pipeline built with Python, Apache Kafka (KRaft), Spa
 - **Structured Storage:** Dual-path consumption into MySQL (raw data) and Spark (rule-based alerts).
 - **Production-Ready Frontend:** React app served via multi-stage Nginx build.
 
-## 🏗 Architecture
+## 🏗 Architecture & Data Flow
 
 ```mermaid
 flowchart TD
@@ -20,21 +20,30 @@ flowchart TD
     API --> DB[(MySQL Database)]
     API -- Control --> Sim[Simulator - Python]
     
-    Sim -- Data --> Kafka[Kafka - KRaft]
-    Kafka -- Raw --> Writer[MySQL Writer]
-    Kafka -- Rules --> Spark[Spark Processor]
+    Sim -- "Keyed by Sensor Type" --> P
+    
+    subgraph Kafka [Kafka Broker: 1 | Topic: sensor_data]
+        direction LR
+        P0[Partition 0: Temp]
+        P1[Partition 1: Press]
+        P2[Partition 2: Vib]
+        P3[Partition 3: Acou]
+    end
+
+    P0 & P1 & P2 & P3 --> Writer[MySQL Writer]
+    P0 & P1 & P2 & P3 --> Spark[Spark Processor]
     
     Writer --> DB
     Spark --> DB
 ```
 
-1.  **Simulator (Python):** Generates timeseries data with configurable frequency and control status polling.
-2.  **Kafka (Apache 3.7.0):** Keyed partitioning ensures sequential order per sensor type (4 partitions).
-3.  **Consumers:**
-    *   **MySQL Writer:** Stores raw timeseries data as-is.
-    *   **Spark Processor:** PySpark Structured Streaming engine for real-time rule evaluation.
-4.  **Backend (FastAPI):** Unified API for data retrieval and simulator control.
-5.  **UI (React/Nginx):** Dashboard with real-time charts (Recharts) and alert feed.
+### Kafka Configuration Details
+- **Brokers:** 1 Broker running in **KRaft mode** (no Zookeeper required).
+- **Topics:** 1 Main topic named `sensor_data`.
+- **Partitions:** 4 Partitions (one for each sensor type).
+- **Processing Logic:**
+    - **Sequential Order:** The Simulator uses the `sensor_type` as the message **key**. Kafka guarantees that all messages with the same key are sent to the same partition, ensuring that a consumer reads a specific sensor's data in the exact order it was generated.
+    - **Parallelism:** By having 4 partitions, the pipeline can handle high-throughput loads. Multiple consumer instances (within a consumer group) can attach to different partitions to process data from different sensors simultaneously without blocking each other.
 
 ## 🛠 Spark & Alerting Rules
 
