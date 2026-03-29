@@ -48,6 +48,17 @@ flowchart TD
 - **Prometheus UI:** [http://localhost:9090](http://localhost:9090)
 - **Kafka Exporter:** [http://localhost:9308/metrics](http://localhost:9308/metrics)
 
+## 🛠 Sensor Thresholds & Alerting Rules
+
+The system monitors four types of sensors. When a value exceeds the following thresholds, the **Spark Processor** generates an alert, and the **UI** highlights the data point with a solid red circle.
+
+| Sensor Type | Threshold | Alert Message | Dashboard Color |
+| :--- | :--- | :--- | :--- |
+| **Temperature** | > 80.0 °C | High Temperature Warning | Orange |
+| **Pressure** | > 150.0 PSI | High Pressure Warning | Green |
+| **Vibration** | > 10.0 Hz | Unusual Vibration Alert | Purple |
+| **Acoustic** | > 90.0 dB | High Noise Level | Blue |
+
 ## 🏁 Quick Start
 
 1.  Ensure **Docker** is running and you have enough memory (at least 4GB recommended for the full cluster).
