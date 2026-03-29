@@ -70,6 +70,16 @@ The system monitors four types of sensors. When a value exceeds the following th
 3.  **Dashboard:** [http://localhost:3000](http://localhost:3000)
 4.  **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
+## 🛑 Shutdown & Cleanup
+
+To stop the pipeline and remove all resources (containers, networks, and volumes):
+```bash
+chmod +x cleanup.sh
+./cleanup.sh
+```
+
+This script will also prune unused Docker images to ensure your disk space is reclaimed.
+
 ## 📁 Project Structure
 
 - `/simulator`: Kafka Producer with control logic.
